@@ -58,14 +58,9 @@ const emptyPage = <T,>(items: T[] = []): PageResult<T> => ({ items, total: items
 function normalizeSearchText(value: string) { return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim() }
 function matchesSearch(query: string, text: string) { return query.split(/\s+/).filter(Boolean).every((term) => text.includes(term)) }
 
-const readBrowserJson = <T,>(key: string, fallback: T): T => {
-  if (typeof window === 'undefined') return fallback
-  try { return JSON.parse(window.localStorage.getItem(key) || 'null') ?? fallback } catch { return fallback }
-}
-const writeBrowserJson = (key: string, value: unknown): boolean => {
-  if (typeof window === 'undefined') return false
-  try { window.localStorage.setItem(key, JSON.stringify(value)); return true } catch { return false }
-}
+let demoDrafts: Draft[] = []
+let demoBookmarks: Bookmark[] = []
+let demoTheme: 'light' | 'dark' | undefined
 
 export const demoRepositories: DemoRepositories = {
   articles: {
@@ -90,19 +85,19 @@ export const demoRepositories: DemoRepositories = {
   activity: { list: () => emptyPage<ActivityEvent>() },
   users: { getCurrent: async () => undefined, getByWallet: () => undefined },
   drafts: {
-    list: () => readBrowserJson<Draft[]>('deci-drafts', []),
-    get: (id) => readBrowserJson<Draft[]>('deci-drafts', []).find((draft) => draft.id === id),
-    save(draft) { const current = readBrowserJson<Draft[]>('deci-drafts', []); const next = [...current.filter((item) => item.id !== draft.id), draft]; return writeBrowserJson('deci-drafts', next) },
-    remove(id) { const next = readBrowserJson<Draft[]>('deci-drafts', []).filter((draft) => draft.id !== id); return writeBrowserJson('deci-drafts', next) },
+    list: () => demoDrafts.map((draft) => ({ ...draft, tags: [...draft.tags] })),
+    get: (id) => { const draft = demoDrafts.find((item) => item.id === id); return draft ? { ...draft, tags: [...draft.tags] } : undefined },
+    save(draft) { demoDrafts = [...demoDrafts.filter((item) => item.id !== draft.id), { ...draft, tags: [...draft.tags] }]; return true },
+    remove(id) { demoDrafts = demoDrafts.filter((draft) => draft.id !== id); return true },
   },
   bookmarks: {
-    list: () => readBrowserJson<Bookmark[]>('deci-bookmarks', []),
-    has: (articleSlug) => readBrowserJson<Bookmark[]>('deci-bookmarks', []).some((bookmark) => bookmark.articleSlug === articleSlug),
-    toggle(articleSlug) { const current = readBrowserJson<Bookmark[]>('deci-bookmarks', []); const next = current.some((item) => item.articleSlug === articleSlug) ? current.filter((item) => item.articleSlug !== articleSlug) : [...current, { articleSlug, savedAt: new Date().toISOString() }]; return writeBrowserJson('deci-bookmarks', next) },
+    list: () => demoBookmarks.map((bookmark) => ({ ...bookmark })),
+    has: (articleSlug) => demoBookmarks.some((bookmark) => bookmark.articleSlug === articleSlug),
+    toggle(articleSlug) { demoBookmarks = demoBookmarks.some((item) => item.articleSlug === articleSlug) ? demoBookmarks.filter((item) => item.articleSlug !== articleSlug) : [...demoBookmarks, { articleSlug, savedAt: new Date().toISOString() }]; return true },
   },
   preferences: {
-    getTheme() { const value = readBrowserJson<string | undefined>('deci-theme', undefined); return value === 'light' || value === 'dark' ? value : undefined },
-    setTheme(theme) { return writeBrowserJson('deci-theme', theme) },
+    getTheme: () => demoTheme,
+    setTheme(theme) { demoTheme = theme; return true },
   },
   notifications: { list: async () => [], markRead: async () => undefined, markAllRead: async () => undefined },
 }
