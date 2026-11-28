@@ -1,5 +1,6 @@
-import DecipediaApp from './decipedia-app'
+import { AppShell } from './app-shell'
+import { HomeView } from './decipedia-app'
 
 export default function HomePage() {
-  return <DecipediaApp />
+  return <AppShell><HomeView /></AppShell>
 }
