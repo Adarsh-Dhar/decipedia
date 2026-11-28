@@ -70,11 +70,17 @@ function normalizeSearchText(value: string) { return value.normalize('NFKD').rep
 function matchesSearch(query: string, text: string) { return query.split(/\s+/).filter(Boolean).every((term) => text.includes(term)) }
 function currentArticles() { return readStorage<Article[]>(STORAGE.articles, articleFixtures).map((article) => ({ ...article, tags: [...article.tags], references: [...(article.references || [])] })) }
 function currentRevisions() { return readStorage<Revision[]>(STORAGE.revisions, []) }
-const sampleActivity: ActivityEvent[] = articleFixtures.slice(0, 6).map((article, index) => ({ id: `sample-activity-${article.id}`, type: index % 3 === 0 ? 'article-created' : 'revision-published', actor: article.author, articleSlug: article.slug, createdAt: `${article.updatedAt}T12:00:00.000Z`, summary: index % 3 === 0 ? 'Published a new article' : 'Improved an article revision' }))
+const sampleActivity: ActivityEvent[] = articleFixtures.flatMap((article, articleIndex) => [
+  { id: `sample-activity-created-${article.id}`, type: 'article-created' as const, actor: article.author, articleSlug: article.slug, createdAt: `${article.updatedAt}T09:00:00.000Z`, summary: 'Published this article' },
+  { id: `sample-activity-revised-${article.id}`, type: 'revision-published' as const, actor: article.author, articleSlug: article.slug, createdAt: `${article.updatedAt}T${String(11 + articleIndex % 8).padStart(2, '0')}:30:00.000Z`, summary: 'Published a revision to this article' },
+]).sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 const sampleNotifications: Notification[] = [
   { id: 'sample-notification-1', title: 'Welcome to Decipedia', body: 'Explore the commons and save articles to build your reading list.', createdAt: '2026-11-25T09:00:00.000Z' },
   { id: 'sample-notification-2', title: 'New guide in Developer Tools', body: 'A beginner’s guide to Gno.land is ready to read.', createdAt: '2026-11-22T14:30:00.000Z' },
-  { id: 'sample-notification-3', title: 'Community update', body: 'Contributors added new perspectives to the open knowledge commons.', createdAt: '2026-11-20T11:00:00.000Z', readAt: '2026-11-21T08:00:00.000Z' },
+  { id: 'sample-notification-3', title: 'New research article', body: 'Reproducible research in practice was added to the Research topic.', createdAt: '2026-11-20T11:00:00.000Z', readAt: '2026-11-21T08:00:00.000Z' },
+  { id: 'sample-notification-4', title: 'A field guide to consensus was updated', body: 'A new revision is available in Blockchain.', createdAt: '2026-11-19T16:10:00.000Z' },
+  { id: 'sample-notification-5', title: 'Keep exploring', body: 'The open governance collection has new perspectives to read.', createdAt: '2026-11-17T10:20:00.000Z', readAt: '2026-11-18T08:00:00.000Z' },
+  { id: 'sample-notification-6', title: 'Your reading list is ready', body: 'Save an article to keep it close for later.', createdAt: '2026-11-15T12:00:00.000Z', readAt: '2026-11-16T08:00:00.000Z' },
 ]
 function currentActivity() { return readStorage<ActivityEvent[]>(STORAGE.activity, sampleActivity) }
 function currentNotifications() { return readStorage<Notification[]>(STORAGE.notifications, sampleNotifications) }
@@ -130,7 +136,7 @@ export const demoRepositories: DemoRepositories = {
       return next
     },
   },
-  topics: { list: () => [...topicFixtures], get: (slug) => topicFixtures.find((topic) => topic.slug === slug) },
+  topics: { list: () => topicFixtures.map((topic) => ({ ...topic, articleCount: currentArticles().filter((article) => article.topic === topic.name).length })), get: (slug) => { const topic = topicFixtures.find((item) => item.slug === slug); return topic ? { ...topic, articleCount: currentArticles().filter((article) => article.topic === topic.name).length } : undefined } },
   contributors: {
     list: (query = {}) => { const offset = Math.max(0, Number(query.cursor) || 0); const items = contributorFixtures.slice(offset, offset + (query.limit || contributorFixtures.length)); return { items, total: contributorFixtures.length, nextCursor: offset + items.length < contributorFixtures.length ? String(offset + items.length) : undefined } },
     get: (username) => contributorFixtures.find((person) => person.username === username),
@@ -141,8 +147,7 @@ export const demoRepositories: DemoRepositories = {
       if (stored.length) return stored.sort((a, b) => b.number - a.number)
       const article = currentArticles().find((item) => item.slug === articleId)
       if (!article) return []
-      const firstContent = article.content.split(/\n\n##\s/)[0]
-      return [{ id: `${article.slug}-r${article.revisions}`, articleId, number: article.revisions, author: article.author, createdAt: article.updatedAt, summary: 'Current published version', content: article.content, snapshot: { title: article.title, summary: article.summary, topic: article.topic, tags: article.tags, content: article.content, references: article.references } }, { id: `${article.slug}-r1`, articleId, number: 1, author: article.author, createdAt: article.updatedAt, summary: 'First published introduction', content: firstContent, snapshot: { title: article.title, summary: article.summary, topic: article.topic, tags: article.tags, content: firstContent, references: article.references } }]
+      return [{ id: `${article.slug}-r${article.revisions}`, articleId, number: article.revisions, author: article.author, createdAt: article.updatedAt, summary: 'Current published version; earlier snapshots are not included in this demo catalog', content: article.content, snapshot: { title: article.title, summary: article.summary, topic: article.topic, tags: article.tags, content: article.content, references: article.references } }]
     },
     compare(articleId, fromId, toId) { const versions = demoRepositories.revisions.list(articleId); const before = versions.find((version) => version.id === fromId); const after = versions.find((version) => version.id === toId); return before && after ? { before: formatRevision(before), after: formatRevision(after) } : undefined },
   },
