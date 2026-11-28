@@ -23,8 +23,10 @@ The App Router owns navigation and 404 behavior. The shared shell is in `app/dec
 
 ## Data and integrations
 
-`NEXT_PUBLIC_APP_DATA_MODE` defaults to `demo` and must be set explicitly for production. Demo fixtures plus browser-only articles, revision snapshots, bookmarks, drafts, theme, activity, and notifications are isolated in `lib/repositories.ts`. Setting the mode to `api` intentionally hides demo content and displays an adapter-required notice; the repository does not yet contain an agreed API schema, authentication contract, Gno article realm, or GnoConnect transaction adapter. No transaction is submitted by this frontend.
+Content and account storage are configured independently. `NEXT_PUBLIC_CONTENT_MODE` selects `demo` or `api` content and must be set explicitly for production. `NEXT_PUBLIC_ACCOUNT_MODE` selects `local` or `supabase`; it defaults to Supabase when the Supabase public URL and key are configured, and to local demo-account storage otherwise. This lets demo articles run with real Supabase authentication, profiles, drafts, bookmarks, and reading preferences.
 
-`lib/api-client.ts` provides a server-side, timeout-bounded, abortable JSON transport with Zod response validation. Endpoint paths and DTO schemas must be supplied from the backend contract before adding concrete API repositories. Do not put secrets in `NEXT_PUBLIC_*` variables.
+Demo content mode still keeps created article revisions, activity, and notifications in browser demo storage. API content mode continues to display an adapter-required notice: the repository does not yet contain an agreed API schema or authentication contract. `lib/api-client.ts` provides a server-side, timeout-bounded, abortable JSON transport with Zod response validation; concrete HTTP repositories require the backend team’s API contract. No transaction is submitted by this frontend.
 
-See `.env.example` for supported configuration names. No wallet or backend credentials are required for demo mode.
+The Supabase account tables use owner-scoped RLS, with matching explicit user filters in account queries. Supabase browser and server clients use the live account-table schema in `lib/supabase/database.types.ts`. Do not expose Supabase secret/service-role keys or other credentials in `NEXT_PUBLIC_*` variables.
+
+See `.env.example` for supported configuration names. No wallet or backend credentials are required for demo content.

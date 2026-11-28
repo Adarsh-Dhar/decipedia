@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import type { Database } from '@/lib/supabase/database.types'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -10,7 +11,7 @@ export async function createClient() {
     throw new Error('Supabase environment is not configured.')
   }
 
-  return createServerClient(url, key, {
+  return createServerClient<Database>(url, key, {
     cookieOptions: { secure: process.env.NODE_ENV === 'production' },
     cookies: {
       getAll: () => cookieStore.getAll(),

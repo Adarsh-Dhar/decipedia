@@ -54,6 +54,8 @@ export function AuthForm({ mode }: AuthFormProps) {
           setError(messageForError(signUpError))
         } else if (!data.session) {
           setNotice('If this email can be registered, a confirmation link is on its way. Confirm your email before saving drafts or bookmarks.')
+        } else if (!data.user) {
+          throw new Error('A user session was returned without a user.')
         } else {
           const { error: profileError } = await supabase.from('profiles').upsert({
             id: data.user.id,

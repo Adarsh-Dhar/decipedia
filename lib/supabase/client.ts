@@ -1,6 +1,8 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/lib/supabase/database.types'
 
-let browserClient: ReturnType<typeof createBrowserClient> | undefined
+let browserClient: SupabaseClient<Database> | undefined
 
 export function createClient() {
   if (!browserClient) {
@@ -11,7 +13,7 @@ export function createClient() {
       throw new Error('Supabase environment is not configured.')
     }
 
-    browserClient = createBrowserClient(url, key, {
+    browserClient = createBrowserClient<Database>(url, key, {
       cookieOptions: { secure: process.env.NODE_ENV === 'production' },
     })
   }

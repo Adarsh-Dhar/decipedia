@@ -1,23 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
 
-export type PublicProfile = {
-  id: string
-  display_name: string
-  bio: string
-  updated_at: string
-}
-
-export async function listPublicProfiles(): Promise<PublicProfile[]> {
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('public_profiles')
-    .select('id,display_name,bio,updated_at')
-    .order('display_name', { ascending: true })
-
-  if (error) throw error
-  return data ?? []
-}
-
 export type SavedDraft = {
   id: string
   title: string
@@ -32,10 +14,11 @@ export type SavedDraft = {
 
 export async function getSavedArticleSlugs(): Promise<string[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
   if (!user) return []
 
-  const { data, error } = await supabase.from('bookmarks').select('article_slug')
+  const { data, error } = await supabase.from('bookmarks').select('article_slug').eq('user_id', user.id)
   if (error) throw error
   return data.map((bookmark: { article_slug: string }) => bookmark.article_slug)
 }
@@ -47,7 +30,7 @@ export async function toggleSavedArticle(slug: string, saved: boolean) {
   if (!user) return false
 
   const result = saved
-    ? await supabase.from('bookmarks').delete().eq('article_slug', slug)
+    ? await supabase.from('bookmarks').delete().eq('article_slug', slug).eq('user_id', user.id)
     : await supabase.from('bookmarks').upsert({ user_id: user.id, article_slug: slug }, { onConflict: 'user_id,article_slug' })
   if (result.error) throw result.error
   return true
@@ -55,10 +38,11 @@ export async function toggleSavedArticle(slug: string, saved: boolean) {
 
 export async function listUserDrafts(): Promise<SavedDraft[]> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
   if (!user) return []
 
-  const { data, error } = await supabase.from('drafts').select('id,title,summary,topic,tags,references,content,article_slug,saved_at').order('updated_at', { ascending: false })
+  const { data, error } = await supabase.from('drafts').select('id,title,summary,topic,tags,references,content,article_slug,saved_at').eq('user_id', user.id).order('updated_at', { ascending: false })
   if (error) throw error
   return data
 }
@@ -93,7 +77,8 @@ export async function removeUserDraft(id: string) {
 
 export async function getUserTheme(): Promise<'light' | 'dark' | 'system' | null> {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
   if (!user) return null
 
   const { data, error } = await supabase.from('user_preferences').select('theme').eq('user_id', user.id).maybeSingle()
@@ -114,7 +99,8 @@ export async function saveUserTheme(theme: 'light' | 'dark' | 'system') {
 
 export async function getOwnProfile() {
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
   if (!user) return null
 
   const { data, error } = await supabase.from('profiles').select('display_name,bio,wallet_address').eq('id', user.id).maybeSingle()
