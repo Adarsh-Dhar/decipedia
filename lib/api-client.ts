@@ -18,9 +18,10 @@ export type ApiRequestOptions<T> = {
   init?: RequestInit
   auth?: AuthSessionProvider
   timeoutMs?: number
+  allowNoContent?: boolean
 }
 
-export async function apiRequest<T>({ path, schema, init = {}, auth, timeoutMs = 12_000 }: ApiRequestOptions<T>): Promise<T> {
+export async function apiRequest<T>({ path, schema, init = {}, auth, timeoutMs = 12_000, allowNoContent = false }: ApiRequestOptions<T>): Promise<T> {
   const baseUrl = process.env.BACKEND_API_URL
   if (!baseUrl) throw new ApiClientError('API mode requires BACKEND_API_URL.', 503)
 
@@ -44,6 +45,7 @@ export async function apiRequest<T>({ path, schema, init = {}, auth, timeoutMs =
     const token = await auth?.getAccessToken(signal)
     const headers = new Headers(init.headers)
     headers.set('Accept', 'application/json')
+    if (!headers.has('x-request-id')) headers.set('x-request-id', crypto.randomUUID())
     if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
     if (token) headers.set('Authorization', `Bearer ${token}`)
     const response = await fetch(url, {
@@ -52,8 +54,15 @@ export async function apiRequest<T>({ path, schema, init = {}, auth, timeoutMs =
       signal,
       headers,
     })
-    const requestId = response.headers.get('x-request-id') || undefined
-    if (!response.ok) throw new ApiClientError(`The request failed (${response.status}).`, response.status, requestId)
+    const requestId = response.headers.get('x-request-id') || headers.get('x-request-id') || undefined
+    if (!response.ok) {
+      const message = response.status === 401 ? 'Authentication is required.'
+        : response.status === 403 ? 'You are not allowed to perform this request.'
+        : response.status === 429 ? 'Too many requests. Please try again later.'
+        : `The request failed (${response.status}).`
+      throw new ApiClientError(message, response.status, requestId)
+    }
+    if (response.status === 204 && allowNoContent) return undefined as T
     let body: unknown
     try { body = await response.json() } catch (cause) { throw new ApiClientError('The service returned invalid JSON.', 502, requestId, { cause }) }
     const parsed = schema.safeParse(body)

@@ -99,6 +99,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           {notice && <p className="auth-notice" role="status">{notice}</p>}
           <button className="button button-dark full-width" type="submit" disabled={pending}>{pending ? 'Please wait…' : isSignUp ? 'Create account' : 'Sign in'}</button>
         </form>
+        {!isSignUp && <p className="auth-switch"><Link href="/auth/forgot-password">Forgot your password?</Link></p>}
         <p className="auth-switch">{isSignUp ? 'Already have an account?' : 'New to Decipedia?'}{' '}<Link href={isSignUp ? '/auth/login' : '/auth/sign-up'}>{isSignUp ? 'Sign in' : 'Create an account'}</Link></p>
         <p className="auth-privacy">Your saved data is private to your account.</p>
       </section>
