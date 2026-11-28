@@ -55,6 +55,13 @@ export function AuthForm({ mode }: AuthFormProps) {
         } else if (!data.session) {
           setNotice('If this email can be registered, a confirmation link is on its way. Confirm your email before saving drafts or bookmarks.')
         } else {
+          const { error: profileError } = await supabase.from('profiles').upsert({
+            id: data.user.id,
+            display_name: displayName.trim(),
+            bio: '',
+            updated_at: new Date().toISOString(),
+          })
+          if (profileError) throw profileError
           await mutate('deci-current-user')
           router.replace(safeNextPath())
           router.refresh()

@@ -17,7 +17,7 @@ export type Contributor = (typeof contributorFixtures)[number]
 export type Revision = { id: string; articleId: string; number: number; author: string; createdAt: string; summary: string; content: string; snapshot?: ArticleDraftInput; transactionHash?: string }
 export type ActivityEvent = { id: string; type: 'article-created' | 'article-updated' | 'revision-published'; actor: string; articleSlug: string; createdAt: string; summary: string }
 export type UserProfile = { id: string; displayName: string; walletAddress?: string; bio?: string; avatarUrl?: string }
-export type Draft = { id: string; title: string; summary: string; topic: string; tags: string[]; content: string; savedAt: string; references?: string[] }
+export type Draft = { id: string; title: string; summary: string; topic: string; tags: string[]; content: string; savedAt: string; references?: string[]; articleSlug?: string | null }
 export type Bookmark = { articleSlug: string; savedAt: string }
 export type Notification = { id: string; title: string; body: string; createdAt: string; readAt?: string }
 

@@ -54,6 +54,29 @@ describe('demo repositories', () => {
     expect(demoRepositories.drafts.get('draft-1')).toBeUndefined()
   })
 
+  it('keeps article edit drafts unpublished until an explicit revision is created', () => {
+    installStorage()
+    const article = demoRepositories.articles.list().items[0]
+    const before = demoRepositories.revisions.list(article.slug)
+    const editDraft = {
+      id: 'edit-draft-1',
+      title: `${article.title} — revised`,
+      summary: article.summary,
+      topic: article.topic,
+      tags: article.tags,
+      references: ['https://example.org/source'],
+      content: `${article.content}\\n\\nNew paragraph`,
+      articleSlug: article.slug,
+      savedAt: new Date().toISOString(),
+    }
+
+    demoRepositories.drafts.save(editDraft)
+
+    expect(demoRepositories.articles.get(article.slug)).toMatchObject(article)
+    expect(demoRepositories.revisions.list(article.slug)).toEqual(before)
+    expect(demoRepositories.drafts.get(editDraft.id)).toMatchObject(editDraft)
+  })
+
   it('treats corrupt local draft data as empty', () => {
     const storage = installStorage()
     storage.setItem('deci-drafts', '{invalid')

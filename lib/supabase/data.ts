@@ -6,7 +6,9 @@ export type SavedDraft = {
   summary: string
   topic: string
   tags: string[]
+  references: string[]
   content: string
+  article_slug: string | null
   saved_at: string
 }
 
@@ -38,7 +40,7 @@ export async function listUserDrafts(): Promise<SavedDraft[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
-  const { data, error } = await supabase.from('drafts').select('id,title,summary,topic,tags,content,saved_at').order('updated_at', { ascending: false })
+  const { data, error } = await supabase.from('drafts').select('id,title,summary,topic,tags,references,content,article_slug,saved_at').order('updated_at', { ascending: false })
   if (error) throw error
   return data
 }
@@ -51,17 +53,23 @@ export async function saveUserDraft(draft: Omit<SavedDraft, 'saved_at'>) {
 
   const { error } = await supabase.from('drafts').upsert({
     ...draft,
+    references: draft.references ?? [],
+    article_slug: draft.article_slug ?? null,
     user_id: user.id,
     saved_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,id' })
+  }, { onConflict: 'id' })
   if (error) throw error
   return true
 }
 
 export async function removeUserDraft(id: string) {
   const supabase = createClient()
-  const { error } = await supabase.from('drafts').delete().eq('id', id)
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError) throw authError
+  if (!user) return
+
+  const { error } = await supabase.from('drafts').delete().eq('id', id).eq('user_id', user.id)
   if (error) throw error
 }
 
