@@ -1,5 +1,23 @@
 import { createClient } from '@/lib/supabase/client'
 
+export type PublicProfile = {
+  id: string
+  display_name: string
+  bio: string
+  updated_at: string
+}
+
+export async function listPublicProfiles(): Promise<PublicProfile[]> {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('public_profiles')
+    .select('id,display_name,bio,updated_at')
+    .order('display_name', { ascending: true })
+
+  if (error) throw error
+  return data ?? []
+}
+
 export type SavedDraft = {
   id: string
   title: string
